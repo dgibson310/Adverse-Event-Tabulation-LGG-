@@ -1,0 +1,232 @@
+---
+title: LGG Data Cleaning and Analysis
+date: "For Hideo and Hirokazu"
+author: "David Gibson"
+output: 
+   rmarkdown::html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+    number_sections: false
+    tidy: true 
+    highlight: haddock
+    code_folding: hide
+---
+
+<br>
+<br>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#load in data (CHANGE THIS IF EDITING DATA ON DIFFERENT COMPUTER)
+
+library(readxl)
+dat <- read_excel("~/Desktop/LGG Data Analysis/LGG_AE_updated2.xlsx")
+#View(dat)
+
+
+```
+
+
+
+##Wrangling
+```{r }
+library(table1)
+library(dplyr)
+
+##################Format variables:
+
+dat$ae <- factor(dat$TOXICITY)
+dat$ae_cat <- dat$TOXICITY_CATEGORY
+
+
+#Arms and levels read in backwards (flip them)
+dat$ARM <- factor(dat$ARM,levels=c("Neoadjuvant Treatment", "Control"), labels=c("Arm 1 (n=9)","Arm 2 (n=8)" ))
+
+
+
+#drop attributions below 3
+dat <- filter(dat, ATTRIBUTION == "Definite" | ATTRIBUTION ==  "Possible" | ATTRIBUTION ==  "Probable")
+
+
+###########Create AE Categories:
+
+dat$c1 <- factor(dat$ae,levels=c("Injection site reaction", "Fatigue","Fever","Flu like symptoms" ))
+dat$c2 <- factor(dat$ae,levels=c("Headache", "Seizure","Dizziness","Myalgia"))
+dat$c3 <- factor(dat$ae,levels=c("Nausea","Constipation","Diarrhea"))
+dat$c4 <- factor(dat$ae,levels=c("Pruritus" ))
+dat$c5 <- factor(dat$ae,levels=c("Anemia","White blood cell decreased","Neutrophil count decreased","Lymphocyte count decreased"), labels = c("Anemia","Leukopenia","Neutropenia","Lymphopenia"))
+dat$c6 <- factor(dat$ae,levels=c("Alanine aminotransferase increased","Aspartate aminotransferase increased","Blood bilirubin increased","Hyponatremia","Hypokalemia","Hypocalcemia"), labels=c("ALT increase","AST increase","Bilirubin increase","Hyponatremia","Hypokalemia","Hypocalcemia"))
+#dat$c7 <-
+
+#label
+table1::label(dat$c1) <- "General Disorders"
+table1::label(dat$c2) <- "Nervous System Related"
+table1::label(dat$c3) <- "Gastrointestinal Disorders"
+table1::label(dat$c4) <- "Skin Disorder"
+table1::label(dat$c5) <- "Blood Disorders"
+table1::label(dat$c6) <- "Laboratory Results"
+#table1::label(dat$c7) <- "Laboratory Results"
+
+
+
+
+
+#################Grade Variable Setup
+# \u2265 <- unicode for greater than or equal to 
+# 
+
+e4<-expression("\u2265 Grade 3") 
+e3<-expression("< Grade 3") 
+
+#Grade >=3
+dat$grade3 <- dat$GRADE >= 3 
+dat$grade3 <- factor(dat$grade3==T  , labels=c(e3, e4))
+#Any Grade
+dat$grade_A <- factor(dat$grade3==T &F , labels=c("Any Grade"))
+
+# dat$graden <- as.numeric(dat$GRADE)
+# dat$grade_a <- cut(dat$graden, breaks = c(0,6),labels = c(e3), include.lowest = TRUE)
+# dat$grade_b <- cut(dat$graden, breaks = c(2,5),labels = c(e4), include.lowest = TRUE)
+
+
+
+########################Label table:
+table1::label(dat$ae) <- "Adverse Event"
+table1::label(dat$ae_cat) <- "Category of Event"
+table1::label(dat$ARM) <- "Study Arm"
+table1::label(dat$grade3) <- e3
+
+```
+
+
+<br>
+
+
+
+
+
+
+<br>
+
+**There were no RLT's
+
+<br>
+<br>
+
+## Table 2 Adverse Events
+
+
+The Table 1 function is not very flexible so I made 2 tables one with >= AE and one with all AE's
+```{r }
+
+#plot table1 with categories of AE
+table1(~ c1 + c2 + c3 + c4 + c5 + c6  | ARM + grade3  , 
+       data = dat, 
+       overall= F, 
+       topclass="Rtable1", 
+       #render.categorical="Freq",
+       render.missing=NULL,
+       droplevels=T,
+       caption="Table 2: Adverse Events by Category",
+       test=T
+       )
+
+
+```
+
+```{r }
+
+#plot table1 with categories of AE
+table1(~ c1 + c2 + c3 + c4 + c5 + c6  | ARM + grade_A  , 
+       data = dat, 
+       overall= F
+       , 
+       topclass="Rtable1", 
+       #render.categorical="Freq",
+       render.missing=NULL,
+       droplevels=T,
+       caption="Table 2: Adverse Events by Category",
+       test=T
+       )
+
+
+```
+
+<br>
+<br>
+
+Without percentages:
+```{r }
+
+#plot table1 with categories of AE
+table1(~ c1 + c2 + c3 + c4 + c5 + c6  | ARM + grade3  , 
+       data = dat, 
+       overall= F, 
+       topclass="Rtable1", 
+       render.categorical="Freq",
+       render.missing=NULL,
+       droplevels=T,
+       caption="Table 2: Adverse Events by Category",
+       test=T
+       )
+
+
+```
+
+```{r }
+
+#plot table1 with categories of AE
+table1(~ c1 + c2 + c3 + c4 + c5 + c6  | ARM + grade_A  , 
+       data = dat, 
+       overall= F
+       , 
+       topclass="Rtable1", 
+       render.categorical="Freq",
+       render.missing=NULL,
+       droplevels=T,
+       caption="Table 2: Adverse Events by Category",
+       test=T
+       )
+
+
+```
+
+<br>
+<br>
+
+##Categorical AEs
+```{r }
+
+#plot table1 with all AE's
+table1(~ ae_cat  | ARM + grade3  , 
+       data = dat, 
+       overall= F, 
+       topclass="Rtable1-zebra", 
+       render.missing=NULL,
+       droplevels=T,
+       caption="Table 2: All Adverse Events"
+       )
+```
+
+
+##All AEs
+```{r }
+
+#plot table1 with all AE's
+table1(~ae  | ARM + grade3  , 
+       data = dat, 
+       overall= F, 
+       topclass="Rtable1-zebra", 
+       render.missing=NULL,
+       droplevels=T,
+       caption="Table 2: All Adverse Events"
+       )
+
+
+
+
+```
+
+
